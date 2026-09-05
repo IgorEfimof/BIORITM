@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon26.png">
+    <meta name="apple-mobile-web-app-title" content="Bioritm">
+    <meta name="theme-color" content="#060b14">
+    <link rel="manifest" href="manifest.json">
+    <title>Мои Биоритмы</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-sun: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 99%, #FECFEF 100%);
+            --bg-sun-solid: #FF9A9E;
+            --bg-moon: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            --bg-moon-solid: #1e3c72;
+            --bg-cloud: linear-gradient(135deg, #E0C3FC 0%, #8EC5FC 100%);
+            --bg-cloud-solid: #a1c4fd;
+            --bg-gradient: var(--bg-sun);
+            --text-main: #2c3e50;
+            --text-muted: #7f8c8d;
+            --card-bg: rgba(255, 255, 255, 0.45);
+            --card-border: rgba(255, 255, 255, 0.6);
+            --card-shadow: rgba(31, 38, 135, 0.15);
+            --input-bg: rgba(255, 255, 255, 0.7);
+            --input-border: rgba(255, 255, 255, 0.9);
+            --focus-ring: rgba(255, 154, 158, 0.6);
+            --btn-hover: rgba(255, 255, 255, 0.9);
+            --scrollbar: rgba(0,0,0,0.2);
+            --btn-today-bg: rgba(255, 255, 255, 0.3);
+            --btn-today-hover: rgba(255, 255, 255, 0.5);
+            --forecast-bg: rgba(255, 255, 255, 0.15);
+            --forecast-border: rgba(255, 255, 255, 0.3);
+            --critical-color: #ffa502;
+        }
+        body[data-theme="moon"] {
+            --bg-gradient: var(--bg-moon);
+            --text-main: #f1f2f6;
+            --text-muted: #bdc3c7;
+            --card-bg: rgba(20, 25, 40, 0.55);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --card-shadow: rgba(0, 0, 0, 0.5);
+            --input-bg: rgba(0, 0, 0, 0.3);
+            --input-border: rgba(255, 255, 255, 0.2);
+            --focus-ring: rgba(44, 83, 100, 0.8);
+            --btn-hover: rgba(255, 255, 255, 0.1);
+            --scrollbar: rgba(255,255,255,0.2);
+            --btn-today-bg: rgba(255, 255, 255, 0.1);
+            --btn-today-hover: rgba(255, 255, 255, 0.2);
+            --forecast-bg: rgba(255, 255, 255, 0.05);
+            --forecast-border: rgba(255, 255, 255, 0.1);
+        }
+        body[data-theme="cloud"] {
+            --bg-gradient: var(--bg-cloud);
+            --text-main: #2c3e50;
+            --text-muted: #57606f;
+            --card-bg: rgba(255, 255, 255, 0.65);
+            --card-border: rgba(255, 255, 255, 0.8);
+            --card-shadow: rgba(142, 197, 252, 0.3);
+            --input-bg: rgba(255, 255, 255, 0.85);
+            --input-border: rgba(255, 255, 255, 1);
+            --focus-ring: rgba(142, 197, 252, 0.6);
+            --btn-hover: rgba(255, 255, 255, 1);
+            --scrollbar: rgba(0,0,0,0.1);
+            --btn-today-bg: rgba(255, 255, 255, 0.4);
+            --btn-today-hover: rgba(255, 255, 255, 0.6);
+            --forecast-bg: rgba(255, 255, 255, 0.2);
+            --forecast-border: rgba(255, 255, 255, 0.4);
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0; padding: 0; min-height: 100vh;
+            background: var(--bg-gradient); background-attachment: fixed;
+            color: var(--text-main);
+            transition: background 0.8s ease, color 0.4s ease;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; }
+        .container {
+            width: 100%; max-width: 800px; padding: 20px;
+            padding-top: max(20px, env(safe-area-inset-top));
+            padding-bottom: max(40px, env(safe-area-inset-bottom));
+            display: flex; flex-direction: column; gap: 20px;
+        }
+        header { text-align: center; margin-top: 10px; margin-bottom: 10px; animation: fadeInDown 0.8s ease-out; }
+        h1 { font-size: 2rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; text-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .subtitle { font-size: 0.95rem; color: var(--text-muted); margin-top: 5px; font-weight: 500; }
+        .theme-switcher {
+            background: var(--card-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border); border-radius: 40px; padding: 6px;
+            display: flex; justify-content: space-between; width: 210px;
+            margin: 0 auto 25px auto; box-shadow: 0 8px 32px var(--card-shadow);
+            position: relative; transition: all 0.4s ease;
+        }
+        .theme-btn {
+            background: transparent; border: none; cursor: pointer;
+            padding: 12px 15px; border-radius: 30px; font-size: 1.3rem;
+            color: var(--text-muted); transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+            z-index: 1; display: flex; align-items: center; justify-content: center;
+            width: 60px; position: relative;
+        }
+        .theme-btn:hover { transform: scale(1.1); }
+        .theme-btn.active { color: #fff; background: var(--bg-sun-solid); box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        body[data-theme="moon"] .theme-btn.active { background: var(--bg-moon-solid); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        body[data-theme="cloud"] .theme-btn.active { background: var(--bg-cloud-solid); box-shadow: 0 4px 15px rgba(142, 197, 252, 0.5); }
+        .card {
+            background: var(--card-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border); border-radius: 24px; padding: 25px 20px;
+            box-shadow: 0 10px 30px var(--card-shadow);
+            transition: background 0.4s ease, box-shadow 0.4s ease;
+            animation: fadeInUp 0.8s ease-out backwards;
+        }
+        .card:nth-child(2) { animation-delay: 0.1s; }
+        .card:nth-child(3) { animation-delay: 0.2s; }
+        .card:nth-child(4) { animation-delay: 0.3s; }
+        .info-card summary { cursor: pointer; font-weight: 700; font-size: 1.05rem; outline: none; list-style: revert; }
+        .info-card summary::marker { color: var(--text-muted); }
+        .info-card .info-body { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+        .info-card .info-body p { margin: 0; font-size: 0.9rem; line-height: 1.6; color: var(--text-main); }
+        .info-card .info-body p strong { font-weight: 700; }
+        .input-group { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
+        .input-row { display: flex; flex-direction: column; gap: 8px; }
+        .input-with-button { display: flex; gap: 10px; align-items: center; }
+        .input-with-button input { flex: 1; }
+        label { font-weight: 600; font-size: 0.95rem; margin-bottom: 8px; display: block; color: var(--text-main); }
+        input[type="date"] {
+            width: 100%; padding: 16px; font-size: 1.1rem; font-family: inherit;
+            border-radius: 16px; border: 2px solid var(--input-border);
+            background: var(--input-bg); color: var(--text-main); outline: none;
+            transition: all 0.3s ease; appearance: none; -webkit-appearance: none;
+        }
+        input[type="date"]:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 4px var(--focus-ring); }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            background: transparent; color: transparent; cursor: pointer;
+            height: auto; left: 0; position: absolute; right: 0; bottom: 0; top: 0; width: auto;
+        }
+        .btn-today {
+            padding: 16px 20px; font-size: 1rem; font-weight: 600; color: var(--text-main);
+            background: var(--btn-today-bg); border: 2px solid var(--input-border);
+            border-radius: 16px; cursor: pointer; transition: all 0.3s ease;
+            white-space: nowrap; min-width: 80px;
+        }
+        .btn-today:hover { background: var(--btn-today-hover); transform: scale(1.02); }
+        .btn-today:active { transform: scale(0.98); }
+        .btn-calc {
+            width: 100%; padding: 18px; font-size: 1.15rem; font-weight: 700; color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none; border-radius: 16px; cursor: pointer;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-transform: uppercase; letter-spacing: 1px;
+            position: relative;
+        }
+        .btn-calc:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        .btn-calc.loading {
+            pointer-events: none;
+        }
+        .btn-calc .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto;
+        }
+        .btn-calc.loading .spinner { display: block; }
+        .btn-calc.loading .btn-text { display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body[data-theme="moon"] .btn-calc { background: linear-gradient(135deg, #2c5364 0%, #203a43 100%); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); }
+        body[data-theme="cloud"] .btn-calc { background: linear-gradient(135deg, #8EC5FC 0%, #E0C3FC 100%); box-shadow: 0 8px 20px rgba(142, 197, 252, 0.5); color: #2c3e50; }
+        body[data-theme="cloud"] .btn-calc .spinner { border-top-color: #2c3e50; }
+        .btn-calc:hover { transform: translateY(-3px); box-shadow: 0 12px 25px rgba(0,0,0,0.2); }
+        .btn-calc:active { transform: translateY(1px); }
+        #results { display: none; flex-direction: column; gap: 20px; }
+        .overall-summary-card {
+            background: var(--card-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--input-border); border-radius: 20px; padding: 22px;
+            box-shadow: 0 10px 30px var(--card-shadow);
+            animation: fadeInUp 0.8s ease-out backwards; position: relative; overflow: hidden;
+        }
+        .overall-summary-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px;
+            background: linear-gradient(90deg, var(--focus-ring), var(--btn-today-hover), var(--focus-ring));
+        }
+        .overall-title { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; margin-bottom: 15px; }
+        .overall-title-icon { font-size: 1.4rem; }
+        .overall-verdict { font-size: 1.2rem; font-weight: 800; margin-bottom: 12px; line-height: 1.3; }
+        .overall-text { font-size: 0.95rem; line-height: 1.6; color: var(--text-main); }
+        .chart-wrapper { position: relative; width: 100%; height: 320px; margin-bottom: 10px; }
+        .stats-container { display: flex; flex-direction: column; gap: 14px; }
+        .stat-item {
+            display: flex; flex-direction: column; gap: 12px; padding: 16px;
+            border-radius: 16px; background: var(--input-bg); border: 1px solid var(--input-border);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03); transition: transform 0.2s ease;
+        }
+        .stat-item:hover { transform: scale(1.01); }
+        .stat-item-top { display: flex; align-items: center; justify-content: space-between; }
+        .stat-left { display: flex; align-items: center; gap: 12px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 8px currentColor; flex-shrink: 0; }
+        .stat-name { font-weight: 600; font-size: 1rem; }
+        .stat-value { font-weight: 800; font-size: 1.1rem; text-align: right; }
+        .status-text { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; opacity: 0.8; display: block; margin-top: 3px; }
+        .stat-description {
+            font-size: 0.88rem; line-height: 1.55; color: var(--text-main);
+            background: var(--forecast-bg); border: 1px solid var(--forecast-border);
+            border-radius: 12px; padding: 12px 14px;
+        }
+        .stat-description.is-critical { border-color: var(--critical-color); }
+        .critical-tag {
+            display: inline-block; margin-left: 8px; padding: 2px 9px; border-radius: 20px;
+            font-size: 0.68rem; font-weight: 700; background: var(--critical-color);
+            color: #fff; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle;
+        }
+        .forecast-section { margin-top: 10px; }
+        .forecast-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; text-align: center; color: var(--text-main); }
+        .forecast-chart-wrapper { position: relative; width: 100%; height: 280px; margin-bottom: 10px; }
+        .forecast-legend { display: flex; justify-content: center; gap: 20px; margin-bottom: 15px; flex-wrap: wrap; }
+        .forecast-legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; color: var(--text-main); }
+        .forecast-legend-item .color-line { width: 24px; height: 3px; border-radius: 2px; }
+        .forecast-legend-item .color-line.phys { background: #ff4757; }
+        .forecast-legend-item .color-line.emo { background: #1e90ff; }
+        .forecast-legend-item .color-line.intel { background: #2ed573; }
+        .day-details-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; text-align: center; color: var(--text-main); }
+        .day-details-list { display: flex; flex-direction: column; gap: 12px; }
+        .day-detail-card {
+            background: var(--input-bg); border: 1px solid var(--input-border);
+            border-radius: 16px; padding: 16px; transition: transform 0.2s ease;
+        }
+        .day-detail-card:hover { transform: scale(1.01); }
+        .day-detail-card.is-today { border-color: var(--focus-ring); box-shadow: 0 0 0 3px var(--focus-ring); }
+        .day-detail-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+        .day-detail-date { font-weight: 700; font-size: 0.98rem; }
+        .day-detail-today-tag {
+            font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+            color: var(--text-muted); background: var(--forecast-bg); border: 1px solid var(--forecast-border);
+            padding: 2px 9px; border-radius: 20px; margin-left: 8px;
+        }
+        .day-detail-rows { display: flex; flex-direction: column; gap: 10px; }
+        .day-detail-row { display: flex; align-items: flex-start; gap: 10px; }
+        .day-detail-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
+        .day-detail-content { flex: 1; min-width: 0; }
+        .day-detail-name-value { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; font-size: 0.88rem; margin-bottom: 3px; }
+        .day-detail-text { font-size: 0.82rem; line-height: 1.5; color: var(--text-muted); }
+        @media (min-width: 600px) {
+            .chart-wrapper { height: 400px; }
+            .forecast-chart-wrapper { height: 300px; }
+            .input-group { flex-direction: row; align-items: flex-end; gap: 20px; }
+            .input-row { flex: 1; }
+            .btn-calc { width: auto; padding: 16px 40px; }
+            h1 { font-size: 2.5rem; }
+        }
+        @media (max-width: 500px) {
+            .input-with-button { flex-direction: column; }
+            .btn-today { width: 100%; justify-content: center; }
+        }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body data-theme="sun">
+
+<div class="container">
+    <header>
+        <h1>Биоритмы</h1>
+        <div class="subtitle">Ваш персональный цикл энергии</div>
+    </header>
+
+    <div class="theme-switcher" role="group" aria-label="Выбор темы">
+        <button class="theme-btn active" data-theme="sun" title="Солнечный день" aria-label="Солнечная тема">☀️</button>
+        <button class="theme-btn" data-theme="moon" title="Лунная ночь" aria-label="Лунная тема">🌙</button>
+        <button class="theme-btn" data-theme="cloud" title="Облачно" aria-label="Облачная тема">☁️</button>
+    </div>
+
+    <details class="card info-card">
+        <summary>ℹ️ Как читать биоритмы и что значит «критическая зона»</summary>
+        <div class="info-body">
+            <p><strong style="color:#ff4757;">Физический ритм (23 дня)</strong> — выносливость, сила, координация и общий тонус тела.</p>
+            <p><strong style="color:#1e90ff;">Эмоциональный ритм (28 дней)</strong> — настроение, чувствительность, способность к общению и творчеству.</p>
+            <p><strong style="color:#2ed573;">Интеллектуальный ритм (33 дня)</strong> — память, логика, концентрация и скорость принятия решений.</p>
+            <p>Когда линия выше нуля — ритм находится в фазе роста и работает на вас. Когда ниже нуля — организм отдыхает, лучше снизить нагрузку.</p>
+            <p><strong>Критическая зона (±1 день от пересечения нуля)</strong> — момент перехода между фазами. Организм наиболее уязвим: возрастает риск ошибок, травм или перепадов настроения. Влияние может ощущаться за сутки до и после точного пересечения.</p>
+        </div>
+    </details>
+
+    <div class="card">
+        <div class="input-group">
+            <div class="input-row">
+                <label for="birthDate">Дата Вашего рождения</label>
+                <input type="date" id="birthDate" required aria-label="Дата рождения">
+            </div>
+            <div class="input-row">
+                <label for="targetDate">Дата расчета</label>
+                <div class="input-with-button">
+                    <input type="date" id="targetDate" required aria-label="Дата расчета">
+                    <button class="btn-today" id="todayBtn" aria-label="Установить сегодня">Сегодня</button>
+                </div>
+            </div>
+        </div>
+        <button class="btn-calc" id="calculateBtn">
+            <span class="btn-text">Рассчитать</span>
+            <span class="spinner"></span>
+        </button>
+    </div>
+
+    <div id="results">
+        <div class="overall-summary-card" id="overallSummaryCard" style="display: none;">
+            <div class="overall-title">
+                <span class="overall-title-icon" id="overallIcon">🔮</span>
+                <span>Общий анализ энергии на текущий день</span>
+            </div>
+            <div class="overall-verdict" id="overallVerdict">...</div>
+            <div class="overall-text" id="overallText">...</div>
+        </div>
+
+        <div class="card">
+            <div style="text-align: center; margin-bottom: 15px;">
+                <div style="font-size: 0.9rem; color: var(--text-muted);">Прожито дней:</div>
+                <div id="daysLived" style="font-size: 2.2rem; font-weight: 800; line-height: 1;">0</div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="bioChart" aria-label="График биоритмов"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="stats-container">
+                <div class="stat-item" id="stat-phys">
+                    <div class="stat-item-top">
+                        <div class="stat-left">
+                            <div class="dot" style="color: #ff4757; background-color: #ff4757;"></div>
+                            <div>
+                                <div class="stat-name">Физический (23 дня)</div>
+                                <div class="status-text" id="status-text-phys" style="color: #ff4757;">...</div>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="val-phys" style="color: #ff4757;">0%</div>
+                    </div>
+                    <div class="stat-description" id="desc-phys">Заполните даты и нажмите «Рассчитать».</div>
+                </div>
+                <div class="stat-item" id="stat-emo">
+                    <div class="stat-item-top">
+                        <div class="stat-left">
+                            <div class="dot" style="color: #1e90ff; background-color: #1e90ff;"></div>
+                            <div>
+                                <div class="stat-name">Эмоциональный (28 дней)</div>
+                                <div class="status-text" id="status-text-emo" style="color: #1e90ff;">...</div>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="val-emo" style="color: #1e90ff;">0%</div>
+                    </div>
+                    <div class="stat-description" id="desc-emo">Заполните даты и нажмите «Рассчитать».</div>
+                </div>
+                <div class="stat-item" id="stat-intel">
+                    <div class="stat-item-top">
+                        <div class="stat-left">
+                            <div class="dot" style="color: #2ed573; background-color: #2ed573;"></div>
+                            <div>
+                                <div class="stat-name">Интеллектуальный (33 дня)</div>
+                                <div class="status-text" id="status-text-intel" style="color: #2ed573;">...</div>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="val-intel" style="color: #2ed573;">0%</div>
+                    </div>
+                    <div class="stat-description" id="desc-intel">Заполните даты и нажмите «Рассчитать».</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card forecast-section">
+            <div class="forecast-title">📈 Прогноз на неделю</div>
+            <div class="forecast-legend">
+                <div class="forecast-legend-item"><div class="color-line phys"></div><span>Физический</span></div>
+                <div class="forecast-legend-item"><div class="color-line emo"></div><span>Эмоциональный</span></div>
+                <div class="forecast-legend-item"><div class="color-line intel"></div><span>Интеллектуальный</span></div>
+            </div>
+            <div class="forecast-chart-wrapper">
+                <canvas id="forecastChart" aria-label="Прогноз биоритмов на неделю"></canvas>
+            </div>
+            <div style="text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">
+                📍 Точка 0 — критическая зона &nbsp;|&nbsp; 🟡 Жёлтая линия — сегодня
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="day-details-title">🗓️ Подробный разбор по дням</div>
+            <div class="day-details-list" id="dayDetailsList"></div>
+        </div>
+        <div style="text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-top: -5px;">
+            *Критическая зона: ±1 день от пересечения нуля.
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // КОНФИГУРАЦИЯ
+    // ============================================================
+    const RHYTHM_CONFIG = {
+        phys: { cycle: 23, color: '#ff4757', name: 'Физический' },
+        emo:  { cycle: 28, color: '#1e90ff', name: 'Эмоциональный' },
+        intel:{ cycle: 33, color: '#2ed573', name: 'Интеллектуальный' }
+    };
+    const RHYTHM_TYPES = Object.keys(RHYTHM_CONFIG);
+
+    const TREND_TEXT = {
+        peak: { rising: 'Показатель приближается к максимуму и продолжает расти.', falling: 'Показатель на пике, но уже начинает плавно снижаться.' },
+        high: { rising: 'Показатель заметно растёт, приближаясь к пиковым значениям.', falling: 'Показатель постепенно снижается после недавнего подъёма.' },
+        mid: { rising: 'Показатель в нейтральной зоне и понемногу растёт.', falling: 'Показатель в нейтральной зоне и понемногу снижается.' },
+        low: { rising: 'Показатель начинает восстанавливаться после спада.', falling: 'Показатель продолжает снижаться после недавнего спада.' },
+        deepLow: { rising: 'Показатель у нижней точки цикла, но уже разворачивается вверх.', falling: 'Показатель находится у нижней точки цикла.' }
+    };
+
+    const ADVICE_TEXT = {
+        phys: { peak: 'Отличное время для интенсивных тренировок и физически тяжёлых задач.', high: 'Хорошая физическая форма — можно смело заниматься активными делами.', mid: 'Энергия умеренная — подойдёт обычная нагрузка без переутомления.', low: 'Возможна усталость — стоит снизить интенсивность нагрузок и больше отдыхать.', deepLow: 'Организму нужен покой, избегайте серьёзных физических перегрузок.' },
+        emo: { peak: 'Прекрасное настроение — хорошее время для общения и творчества.', high: 'Хороший эмоциональный фон, легко находить общий язык с окружающими.', mid: 'Настроение ровное, без резких перепадов.', low: 'Возможна повышенная чувствительность — будьте бережны к себе.', deepLow: 'Эмоциональный спад — постарайтесь избегать конфликтов и сложных решений.' },
+        intel: { peak: 'Ясность мышления на максимуме — время для сложных задач.', high: 'Хорошая концентрация и способность к анализу информации.', mid: 'Мышление ровное, подходит для рутинных и привычных задач.', low: 'Концентрация снижена — сложные интеллектуальные задачи лучше отложить.', deepLow: 'Умственная активность на спаде, дайте себе время на отдых.' }
+    };
+
+    const CRITICAL_TEXT = {
+        phys: 'Критическая зона физического ритма: повышен риск травм и усталости. Лучше не планировать серьёзные физические нагрузки.',
+        emo: 'Критическая зона эмоционального ритма: возможны перепады настроения и чувствительность. Старайтесь избегать конфликтных ситуаций.',
+        intel: 'Критическая зона интеллектуального ритма: возможны рассеянность и ошибки. Важные документы и решения лучше перепроверить.'
+    };
+
+    // ============================================================
+    // ТЕМЫ
+    // ============================================================
+    const themeBtns = document.querySelectorAll('.theme-btn');
+    const body = document.body;
+    const savedTheme = localStorage.getItem('theme') || 'sun';
+    body.setAttribute('data-theme', savedTheme);
+    themeBtns.forEach(btn => {
+        if (btn.getAttribute('data-theme') === savedTheme) btn.classList.add('active');
+        else btn.classList.remove('active');
+    });
+    themeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            themeBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const theme = btn.getAttribute('data-theme');
+            body.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            if (bioChart) updateChartTheme(bioChart, false);
+            if (forecastChart) updateChartTheme(forecastChart, true);
+        });
+    });
+
+    // ============================================================
+    // ДАТЫ
+    // ============================================================
+    const birthDateInput = document.getElementById('birthDate');
+    const targetDateInput = document.getElementById('targetDate');
+    const todayBtn = document.getElementById('todayBtn');
+
+    const getLocalDateString = (date = new Date()) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const parseLocalDate = (dateString) => {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+    };
+
+    const isValidDate = (dateString) => {
+        const date = parseLocalDate(dateString);
+        return date instanceof Date && !isNaN(date) && getLocalDateString(date) === dateString;
+    };
+
+    targetDateInput.value = getLocalDateString();
+    const savedBirthDate = localStorage.getItem('birthDate');
+    if (savedBirthDate && isValidDate(savedBirthDate)) birthDateInput.value = savedBirthDate;
+
+    birthDateInput.addEventListener('change', () => {
+        if (birthDateInput.value) {
+            localStorage.setItem('birthDate', birthDateInput.value);
+            if (birthDateInput.value && targetDateInput.value) calculateBiorhythms();
+        }
+    });
+    targetDateInput.addEventListener('change', () => {
+        if (birthDateInput.value && targetDateInput.value) calculateBiorhythms();
+    });
+
+    birthDateInput.addEventListener('focus', () => {
+        setTimeout(() => birthDateInput.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+    });
+
+    todayBtn.addEventListener('click', () => {
+        targetDateInput.value = getLocalDateString();
+        if (birthDateInput.value) calculateBiorhythms();
+    });
+
+    // ============================================================
+    // ГРАФИКИ
+    // ============================================================
+    let bioChart = null;
+    let forecastChart = null;
+
+    const todayLinePlugin = {
+        id: 'todayLine',
+        beforeDraw: function(chart) {
+            const ctx = chart.ctx;
+            const xAxis = chart.scales.x;
+            const yAxis = chart.scales.y;
+            if (!xAxis || !yAxis) return;
+            
+            const x = xAxis.getPixelForValue(0);
+            if (isNaN(x)) return;
+            
+            ctx.save();
+            ctx.setLineDash([6, 4]);
+            ctx.strokeStyle = '#ffa502';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = '#ffa502';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.moveTo(x, yAxis.top);
+            ctx.lineTo(x, yAxis.bottom);
+            ctx.stroke();
+            
+            ctx.setLineDash([]);
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ffa502';
+            ctx.font = 'bold 10px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('▼ Сегодня', x, yAxis.top - 8);
+            ctx.restore();
+        }
+    };
+
+    // Глобальная регистрация плагина (выполняется один раз)
+    Chart.register(todayLinePlugin);
+
+    function getChartOptions(isDark, isForecast = false) {
+        const gridColor = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.08)';
+        const tickColor = isDark ? '#bdc3c7' : '#7f8c8d';
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.75)',
+                    titleFont: { size: 13 },
+                    bodyFont: { size: 13 },
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(context) {
+                            let val = context.raw * 100;
+                            return context.dataset.label + ': ' + (val > 0 ? '+' : '') + val.toFixed(0) + '%';
+                        }
+                    }
+                },
+                todayLine: { enabled: isForecast } // Включаем плагин только для прогноза
+            },
+            scales: {
+                x: {
+                    grid: { color: gridColor, drawBorder: false, tickLength: isForecast ? 8 : 0 },
+                    ticks: { 
+                        color: tickColor, 
+                        maxTicksLimit: isForecast ? 7 : 8, 
+                        maxRotation: isForecast ? 25 : 0, 
+                        minRotation: isForecast ? 25 : 0, 
+                        font: { size: isForecast ? 10 : 12 }
+                    }
+                },
+                y: {
+                    grid: { color: gridColor, drawBorder: false, tickLength: 0 },
+                    ticks: {
+                        color: tickColor,
+                        callback: function(value) { if (value === 1 || value === -1 || value === 0) return value; return ''; },
+                        stepSize: 1,
+                        font: { size: 10 }
+                    },
+                    min: isForecast ? -1.2 : -1.1,
+                    max: isForecast ? 1.2 : 1.1
+                }
+            },
+            elements: { line: { borderJoinStyle: 'round' } }
+        };
+    }
+
+    function updateChartTheme(chart, isForecast) {
+        if (!chart) return;
+        const isDark = body.getAttribute('data-theme') === 'moon';
+        chart.options = getChartOptions(isDark, isForecast);
+        chart.update('none');
+    }
+
+    // ============================================================
+    // ОСНОВНАЯ ЛОГИКА
+    // ============================================================
+    function getCyclePos(day, cycleLength) { return ((day % cycleLength) + cycleLength) % cycleLength; }
+
+    function isCriticalDay(day, cycleLength) {
+        const cyclePos = getCyclePos(day, cycleLength);
+        const halfCycle = cycleLength / 2;
+        return (cyclePos < 1 || cyclePos > cycleLength - 1) || Math.abs(cyclePos - halfCycle) < 1;
+    }
+
+    function getLevel(value) {
+        if (value >= 70) return 'peak';
+        if (value >= 25) return 'high';
+        if (value > -25) return 'mid';
+        if (value > -70) return 'low';
+        return 'deepLow';
+    }
+
+    function getTrend(day, cycleLength) { return Math.cos((2 * Math.PI * day) / cycleLength) >= 0 ? 'rising' : 'falling'; }
+
+    function describeRhythm(type, value, day, cycleLength) {
+        if (isCriticalDay(day, cycleLength)) return { text: CRITICAL_TEXT[type], critical: true };
+        const level = getLevel(value);
+        const trend = getTrend(day, cycleLength);
+        const text = TREND_TEXT[level][trend] + ' ' + ADVICE_TEXT[type][level];
+        return { text: text, critical: false };
+    }
+
+    function generateOverallSummary(dayOffset) {
+        const physVal = Math.sin((2 * Math.PI * dayOffset) / RHYTHM_CONFIG.phys.cycle) * 100;
+        const emoVal = Math.sin((2 * Math.PI * dayOffset) / RHYTHM_CONFIG.emo.cycle) * 100;
+        const intelVal = Math.sin((2 * Math.PI * dayOffset) / RHYTHM_CONFIG.intel.cycle) * 100;
+
+        const critPhys = isCriticalDay(dayOffset, RHYTHM_CONFIG.phys.cycle);
+        const critEmo = isCriticalDay(dayOffset, RHYTHM_CONFIG.emo.cycle);
+        const critIntel = isCriticalDay(dayOffset, RHYTHM_CONFIG.intel.cycle);
+
+        const criticalCount = [critPhys, critEmo, critIntel].filter(Boolean).length;
+        const positiveCount = [physVal, emoVal, intelVal].filter(v => v > 0).length;
+
+        const physStr = (physVal > 0 ? '+' : '') + physVal.toFixed(0) + '%';
+        const emoStr = (emoVal > 0 ? '+' : '') + emoVal.toFixed(0) + '%';
+        const intelStr = (intelVal > 0 ? '+' : '') + intelVal.toFixed(0) + '%';
+
+        let icon = '🔮', verdict = '', text = '';
+
+        if (criticalCount >= 2) {
+            icon = '⚠️';
+            verdict = 'День повышенной осторожности';
+            text = `Два или три ритма одновременно пересекают нулевую линию. Это момент максимальной уязвимости. Избегайте серьёзных нагрузок, важных переговоров и принятия судьбоносных решений. (Физический: ${physStr}, Эмоциональный: ${emoStr}, Интеллектуальный: ${intelStr})`;
+        } else if (criticalCount === 1) {
+            icon = '⚠️';
+            verdict = 'Критическая зона — требует внимания';
+            text = `Один из ритмов сегодня пересекает нулевую отметку. Вы наиболее нестабильны в этой сфере. Будьте особенно внимательны и не перегружайте себя. (Физический: ${physStr}, Эмоциональный: ${emoStr}, Интеллектуальный: ${intelStr})`;
+        } else if (positiveCount === 3 && physVal > 25 && emoVal > 25 && intelVal > 25) {
+            icon = '🚀';
+            verdict = 'Идеальный день для свершений';
+            text = `Все три ритма в положительной зоне и гармонично дополняют друг друга. Отличное время для сложных проектов, встреч и активного отдыха. Используйте этот день на 100%! (Физический: ${physStr}, Эмоциональный: ${emoStr}, Интеллектуальный: ${intelStr})`;
+        } else if (positiveCount === 0) {
+            icon = '🔋';
+            verdict = 'День восстановления';
+            text = `Все три ритма в отрицательной фазе. Организм нуждается в передышке. Отложите важные задачи, откажитесь от интенсивных тренировок и посвятите время отдыху. (Физический: ${physStr}, Эмоциональный: ${emoStr}, Интеллектуальный: ${intelStr})`;
+        } else {
+            if (physVal < 0 && intelVal > 25) {
+                icon = '🧠';
+                verdict = 'Время для умственного труда';
+                text = `Интеллект на высоте (${intelStr}), но физическая энергия на спаде (${physStr}). Отличный день для планирования и аналитики. Избегайте тяжёлых физических нагрузок.`;
+            } else if (physVal > 25 && intelVal < 0) {
+                icon = '💪';
+                verdict = 'Тело просит движения';
+                text = `Физическая форма великолепна (${physStr}), но концентрация снижена (${intelStr}). Идеальный день для спорта или работы руками. Избегайте сложных умственных задач.`;
+            } else if (emoVal > 25) {
+                icon = '❤️';
+                verdict = 'Эмоциональный подъём и гармония';
+                text = `Эмоциональное состояние сегодня особенно устойчиво (${emoStr}). Прекрасное время для общения, творчества и решения вопросов, требующих эмпатии.`;
+            } else {
+                icon = '⚖️';
+                verdict = 'Нейтральный, сбалансированный день';
+                text = `Ритмы находятся в разных фазах, уравновешивая друг друга. Отличное время для повседневных дел и планомерного движения к целям без сверхусилий. (Физический: ${physStr}, Эмоциональный: ${emoStr}, Интеллектуальный: ${intelStr})`;
+            }
+        }
+
+        const card = document.getElementById('overallSummaryCard');
+        document.getElementById('overallIcon').innerText = icon;
+        document.getElementById('overallVerdict').innerText = verdict;
+        document.getElementById('overallVerdict').style.color = criticalCount > 0 ? '#ffa502' : '';
+        document.getElementById('overallText').innerText = text;
+        card.style.display = 'block';
+    }
+
+    function calculateBiorhythms() {
+        const birthVal = birthDateInput.value;
+        const targetVal = targetDateInput.value;
+        if (!birthVal || !targetVal) { alert('Пожалуйста, выберите обе даты.'); return; }
+
+        if (!isValidDate(birthVal)) { alert('Пожалуйста, введите корректную дату рождения.'); return; }
+        if (!isValidDate(targetVal)) { alert('Пожалуйста, введите корректную дату расчета.'); return; }
+
+        const birthDate = parseLocalDate(birthVal);
+        const targetDate = parseLocalDate(targetVal);
+        if (birthDate > targetDate) { alert('Дата рождения не может быть позже даты расчета.'); return; }
+
+        const btn = document.getElementById('calculateBtn');
+        btn.classList.add('loading');
+        btn.disabled = true;
+
+        setTimeout(() => {
+            try {
+                const diffTime = targetDate - birthDate;
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.style.display = 'flex';
+                setTimeout(() => { resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+
+                document.getElementById('daysLived').innerText = diffDays.toLocaleString('ru-RU');
+
+                RHYTHM_TYPES.forEach(type => {
+                    const cycle = RHYTHM_CONFIG[type].cycle;
+                    const value = Math.sin((2 * Math.PI * diffDays) / cycle) * 100;
+                    updateStatUI(type, value, cycle, diffDays);
+                });
+
+                generateOverallSummary(diffDays);
+                renderMainChart(diffDays);
+                renderForecastChart(targetDate, diffDays);
+                renderDayDetails(targetDate, diffDays);
+            } catch (error) {
+                console.error("Ошибка при расчете биоритмов:", error);
+                alert("Произошла непредвиденная ошибка при расчете. Пожалуйста, обновите страницу.");
+            } finally {
+                // ГАРАНТИРОВАННО снимаем блокировку кнопки, даже если внутри try произошла ошибка
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }, 300);
+    }
+
+    function updateStatUI(type, value, cycleLength, currentDay) {
+        const valElem = document.getElementById(`val-${type}`);
+        const textElem = document.getElementById(`status-text-${type}`);
+        const descElem = document.getElementById(`desc-${type}`);
+        const config = RHYTHM_CONFIG[type];
+        const formattedValue = (value > 0 ? '+' : '') + value.toFixed(0) + '%';
+        valElem.innerText = formattedValue;
+
+        const isCritical = isCriticalDay(currentDay, cycleLength);
+        if (isCritical) {
+            textElem.innerText = 'Критическая зона ⚠️';
+            textElem.style.color = '#ffa502';
+        } else if (value > 0) {
+            textElem.innerText = 'Фаза Роста ↗️';
+            textElem.style.color = config.color;
+        } else {
+            textElem.innerText = 'Фаза Спада ↘️';
+            textElem.style.color = config.color;
+        }
+
+        const description = describeRhythm(type, value, currentDay, cycleLength);
+        descElem.innerText = description.text;
+        descElem.classList.toggle('is-critical', description.critical);
+    }
+
+    // ============================================================
+    // ОТРИСОВКА ГРАФИКОВ
+    // ============================================================
+    function renderMainChart(centerDays) {
+        const ctx = document.getElementById('bioChart').getContext('2d');
+        const isDark = body.getAttribute('data-theme') === 'moon';
+        const labels = [];
+        const datasets = RHYTHM_TYPES.map(type => ({
+            label: RHYTHM_CONFIG[type].name,
+            data: [],
+            borderColor: RHYTHM_CONFIG[type].color,
+            backgroundColor: RHYTHM_CONFIG[type].color,
+            borderWidth: 3,
+            pointRadius: 0,
+            pointHoverRadius: 6,
+            tension: 0.4,
+            borderDash: type === 'intel' ? [5, 5] : []
+        }));
+
+        for (let i = -15; i <= 15; i++) {
+            const day = centerDays + i;
+            const d = new Date();
+            d.setDate(d.getDate() + i);
+            labels.push(`${d.getDate()}.${d.getMonth() + 1}`);
+            RHYTHM_TYPES.forEach((type, index) => {
+                datasets[index].data.push(Math.sin((2 * Math.PI * day) / RHYTHM_CONFIG[type].cycle));
+            });
+        }
+
+        if (bioChart) {
+            bioChart.data.labels = labels;
+            bioChart.data.datasets = datasets;
+            updateChartTheme(bioChart, false);
+            return;
+        }
+
+        Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+        bioChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets },
+            options: getChartOptions(isDark, false)
+        });
+    }
+
+    function renderForecastChart(targetDate, currentDay) {
+        const ctx = document.getElementById('forecastChart').getContext('2d');
+        const isDark = body.getAttribute('data-theme') === 'moon';
+        const labels = [];
+        const datasets = RHYTHM_TYPES.map(type => ({
+            label: RHYTHM_CONFIG[type].name,
+            data: [],
+            borderColor: RHYTHM_CONFIG[type].color,
+            backgroundColor: RHYTHM_CONFIG[type].color,
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointHoverRadius: 8,
+            pointBackgroundColor: RHYTHM_CONFIG[type].color,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            tension: 0.3,
+            fill: false,
+            borderDash: type === 'intel' ? [5, 5] : []
+        }));
+
+        const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+        const monthNames = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+
+        for (let i = 0; i < 7; i++) {
+            const forecastDate = new Date(targetDate);
+            forecastDate.setDate(forecastDate.getDate() + i);
+            labels.push(`${dayNames[forecastDate.getDay()]} ${forecastDate.getDate()} ${monthNames[forecastDate.getMonth()]}`);
+            const dayOffset = currentDay + i;
+            RHYTHM_TYPES.forEach((type, index) => {
+                datasets[index].data.push(Math.sin((2 * Math.PI * dayOffset) / RHYTHM_CONFIG[type].cycle));
+            });
+        }
+
+        const options = getChartOptions(isDark, true);
+
+        if (forecastChart) {
+            forecastChart.data.labels = labels;
+            forecastChart.data.datasets = datasets;
+            forecastChart.options = options;
+            forecastChart.update('none');
+            return;
+        }
+
+        forecastChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets },
+            options: options
+        });
+    }
+
+    // ============================================================
+    // ПОДРОБНЫЙ РАЗБОР ПО ДНЯМ
+    // ============================================================
+    function renderDayDetails(targetDate, currentDay) {
+        const container = document.getElementById('dayDetailsList');
+        container.innerHTML = '';
+        const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+        const monthNames = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(targetDate);
+            date.setDate(date.getDate() + i);
+            const dayOffset = currentDay + i;
+            const dateLabel = `${dayNames[date.getDay()]}, ${date.getDate()} ${monthNames[date.getMonth()]}`;
+            let rowsHtml = '';
+
+            RHYTHM_TYPES.forEach(type => {
+                const config = RHYTHM_CONFIG[type];
+                const value = Math.sin((2 * Math.PI * dayOffset) / config.cycle) * 100;
+                const description = describeRhythm(type, value, dayOffset, config.cycle);
+                const formattedValue = (value > 0 ? '+' : '') + value.toFixed(0) + '%';
+                rowsHtml += `
+                    <div class="day-detail-row">
+                        <div class="day-detail-dot" style="color:${config.color}; background-color:${config.color};"></div>
+                        <div class="day-detail-content">
+                            <div class="day-detail-name-value">
+                                <span>${config.name}${description.critical ? '<span class="critical-tag">Критическая зона</span>' : ''}</span>
+                                <span style="color:${config.color};">${formattedValue}</span>
+                            </div>
+                            <div class="day-detail-text">${description.text}</div>
+                        </div>
+                    </div>`;
+            });
+
+            const isToday = i === 0;
+            const card = document.createElement('div');
+            card.className = 'day-detail-card' + (isToday ? ' is-today' : '');
+            card.innerHTML = `
+                <div class="day-detail-header">
+                    <div class="day-detail-date">${dateLabel}${isToday ? '<span class="day-detail-today-tag">Сегодня</span>' : ''}</div>
+                </div>
+                <div class="day-detail-rows">${rowsHtml}</div>`;
+            container.appendChild(card);
+        }
+    }
+
+    // ============================================================
+    // ОБРАБОТЧИКИ
+    // ============================================================
+    document.getElementById('calculateBtn').addEventListener('click', calculateBiorhythms);
+
+    window.addEventListener('load', () => {
+        if (birthDateInput.value && targetDateInput.value) {
+            setTimeout(calculateBiorhythms, 200);
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const active = document.activeElement;
+            if (active === birthDateInput || active === targetDateInput) {
+                e.preventDefault();
+                calculateBiorhythms();
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
