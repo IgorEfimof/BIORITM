@@ -211,8 +211,36 @@
         }
         .overall-title { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; margin-bottom: 15px; }
         .overall-title-icon { font-size: 1.4rem; }
-        .overall-verdict { font-size: 1.2rem; font-weight: 800; margin-bottom: 12px; line-height: 1.3; }
+        .overall-verdict { font-size: 1.2rem; font-weight: 800; margin-bottom: 8px; line-height: 1.3; }
         .overall-text { font-size: 0.95rem; line-height: 1.6; color: var(--text-main); }
+        .overall-breakdown {
+            margin-top: 12px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: var(--forecast-bg);
+            border: 1px solid var(--forecast-border);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        .overall-breakdown .rhythm-line {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 4px 0;
+        }
+        .overall-breakdown .rhythm-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .overall-breakdown .rhythm-label {
+            font-weight: 600;
+            min-width: 100px;
+        }
+        .overall-breakdown .rhythm-status {
+            font-weight: 500;
+        }
         .chart-wrapper { position: relative; width: 100%; height: 320px; margin-bottom: 10px; }
         .stats-container { display: flex; flex-direction: column; gap: 14px; }
         .stat-item {
@@ -282,7 +310,6 @@
         .day-detail-name-value { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; font-size: 0.88rem; margin-bottom: 3px; flex-wrap: wrap; }
         .day-detail-text { font-size: 0.82rem; line-height: 1.5; color: var(--text-muted); }
 
-        /* Блок "Лучшие дни" - ИСПРАВЛЕННАЯ ВЕРСИЯ */
         .best-days-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
@@ -342,7 +369,6 @@
             color: #fff;
         }
 
-        /* Индекс энергии */
         .energy-index {
             display: flex;
             align-items: center;
@@ -375,7 +401,6 @@
             font-weight: 500;
         }
 
-        /* Жизненный этап */
         .life-stage {
             display: flex;
             gap: 20px;
@@ -425,6 +450,7 @@
             .best-day-values { font-size: 0.7rem; gap: 4px; }
             .best-day-card { padding: 10px 8px; }
             .best-day-date { font-size: 0.8rem; }
+            .overall-breakdown .rhythm-label { min-width: 80px; font-size: 0.8rem; }
         }
         @media (max-width: 380px) {
             .best-days-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -457,7 +483,7 @@
             <p><strong style="color:#1e90ff;">Эмоциональный ритм (28 дней)</strong> — настроение, чувствительность, способность к общению и творчеству.</p>
             <p><strong style="color:#2ed573;">Интеллектуальный ритм (33 дня)</strong> — память, логика, концентрация и скорость принятия решений.</p>
             <p>Когда линия выше нуля — ритм находится в фазе роста и работает на вас. Когда ниже нуля — организм отдыхает, лучше снизить нагрузку.</p>
-            <p><strong>Критическая зона (±1 день от пересечения нуля)</strong> — момент перехода между фазами. Организм наиболее уязвим: возрастает риск ошибок, травм или перепадов настроения.</p>
+            <p><strong>Критическая зона</strong> — период перехода между фазами. В рамках модели это считается нестабильным периодом, поэтому рекомендуется быть внимательнее к нагрузке, решениям и эмоциональному состоянию.</p>
             <div class="disclaimer">
                 ⚠️ <strong>Важно:</strong> Классическая теория биоритмов (циклы 23/28/33 дня) не имеет надёжного научного подтверждения. 
                 Этот инструмент создан для самонаблюдения и развлечения, а не для медицинских или профессиональных прогнозов.
@@ -489,11 +515,29 @@
         <div class="overall-summary-card" id="overallSummaryCard" style="display: none;">
             <div class="overall-title">
                 <span class="overall-title-icon" id="overallIcon">🔮</span>
-                <span>Общий анализ энергии на текущий день</span>
+                <span>Общий анализ энергии</span>
             </div>
             <div class="overall-verdict" id="overallVerdict">...</div>
             <div class="overall-text" id="overallText">...</div>
             
+            <div class="overall-breakdown" id="overallBreakdown">
+                <div class="rhythm-line">
+                    <div class="rhythm-dot" style="background:#ff4757;"></div>
+                    <span class="rhythm-label">Физический</span>
+                    <span class="rhythm-status" id="breakdown-phys">—</span>
+                </div>
+                <div class="rhythm-line">
+                    <div class="rhythm-dot" style="background:#1e90ff;"></div>
+                    <span class="rhythm-label">Эмоциональный</span>
+                    <span class="rhythm-status" id="breakdown-emo">—</span>
+                </div>
+                <div class="rhythm-line">
+                    <div class="rhythm-dot" style="background:#2ed573;"></div>
+                    <span class="rhythm-label">Интеллектуальный</span>
+                    <span class="rhythm-status" id="breakdown-intel">—</span>
+                </div>
+            </div>
+
             <div class="energy-index" id="energyIndexBlock">
                 <div class="energy-index-number" id="energyIndexValue">0</div>
                 <div style="flex:1;">
@@ -634,34 +678,28 @@
     };
     const RHYTHM_TYPES = Object.keys(RHYTHM_CONFIG);
 
-    const TREND_TEXT = {
-        peak: { rising: 'Показатель приближается к максимуму и продолжает расти.', falling: 'Показатель на пике, но уже начинает плавно снижаться.' },
-        high: { rising: 'Показатель заметно растёт, приближаясь к пиковым значениям.', falling: 'Показатель постепенно снижается после недавнего подъёма.' },
-        mid: { rising: 'Показатель в нейтральной зоне и понемногу растёт.', falling: 'Показатель в нейтральной зоне и понемногу снижается.' },
-        low: { rising: 'Показатель начинает восстанавливаться после спада.', falling: 'Показатель продолжает снижаться после недавнего спада.' },
-        deepLow: { rising: 'Показатель у нижней точки цикла, но уже разворачивается вверх.', falling: 'Показатель находится у нижней точки цикла.' }
-    };
-
-    const ADVICE_TEXT = {
-        phys: { peak: 'Отличное время для интенсивных тренировок и физически тяжёлых задач.', high: 'Хорошая физическая форма — можно смело заниматься активными делами.', mid: 'Энергия умеренная — подойдёт обычная нагрузка без переутомления.', low: 'Возможна усталость — стоит снизить интенсивность нагрузок и больше отдыхать.', deepLow: 'Организму нужен покой, избегайте серьёзных физических перегрузок.' },
-        emo: { peak: 'Прекрасное настроение — хорошее время для общения и творчества.', high: 'Хороший эмоциональный фон, легко находить общий язык с окружающими.', mid: 'Настроение ровное, без резких перепадов.', low: 'Возможна повышенная чувствительность — будьте бережны к себе.', deepLow: 'Эмоциональный спад — постарайтесь избегать конфликтов и сложных решений.' },
-        intel: { peak: 'Ясность мышления на максимуме — время для сложных задач.', high: 'Хорошая концентрация и способность к анализу информации.', mid: 'Мышление ровное, подходит для рутинных и привычных задач.', low: 'Концентрация снижена — сложные интеллектуальные задачи лучше отложить.', deepLow: 'Умственная активность на спаде, дайте себе время на отдых.' }
-    };
-
-    const CRITICAL_TEXT = {
-        phys: 'Критическая зона физического ритма: повышен риск травм и усталости. Лучше не планировать серьёзные физические нагрузки.',
-        emo: 'Критическая зона эмоционального ритма: возможны перепады настроения и чувствительность. Старайтесь избегать конфликтных ситуаций.',
-        intel: 'Критическая зона интеллектуального ритма: возможны рассеянность и ошибки. Важные документы и решения лучше перепроверить.'
-    };
-
-    const RECOMMENDATIONS = {
-        high_phys_high_intel: 'Отличный день для сложных проектов, которые требуют и физической активности, и умственного напряжения. Например, работа в саду, строительство или активный отдых на природе.',
-        high_phys_low_intel: 'Хороший день для физической работы и рутинных задач. Сложные решения лучше отложить. Займитесь спортом или делами, не требующими глубокой концентрации.',
-        low_phys_high_intel: 'День для интеллектуального труда. Планируйте, анализируйте, учитесь. Физические нагрузки сведите к минимуму.',
-        high_emo: 'Эмоциональный подъём — отличное время для общения, творчества и решения вопросов, требующих эмпатии. Наслаждайтесь общением с близкими.',
-        low_emo: 'Эмоциональный спад — будьте бережны к себе. Избегайте конфликтов, не принимайте важных решений, связанных с людьми.',
-        critical: 'Критическая зона — день нестабильности. Избегайте серьёзных нагрузок, важных переговоров и принятия судьбоносных решений. Лучше заняться привычными делами.',
-        neutral: 'Сбалансированный день. Занимайтесь повседневными делами, не форсируйте события. Прислушивайтесь к своему организму.'
+    // ============================================================
+    // ЧЕЛОВЕЧЕСКИЕ ОПИСАНИЯ ДЛЯ КАЖДОГО РИТМА
+    // ============================================================
+    const RHYTHM_HUMAN = {
+        phys: {
+            high: 'физическая энергия высокая, тело готово к активности',
+            mid: 'физическая энергия умеренная, для тяжёлых нагрузок лучше подождать',
+            low: 'физическая энергия снижена, лучше дать себе отдых',
+            critical: 'физический ритм в переходной зоне — стоит быть аккуратнее с нагрузками'
+        },
+        emo: {
+            high: 'эмоциональный фон стабильный и ровный',
+            mid: 'эмоциональное состояние нейтральное, без резких перепадов',
+            low: 'эмоциональный фон снижен, возможна повышенная чувствительность',
+            critical: 'эмоциональный ритм в переходной зоне — будьте внимательны к своему настроению'
+        },
+        intel: {
+            high: 'интеллектуальный ритм на подъёме, мышление ясное и чёткое',
+            mid: 'интеллектуальная активность умеренная, подходит для привычных задач',
+            low: 'интеллектуальный ритм снижается, лучше отложить сложные решения',
+            critical: 'интеллектуальный ритм в переходной зоне — возможна рассеянность'
+        }
     };
 
     // ============================================================
@@ -862,44 +900,19 @@
     function getCycleStage(day, cycleLength) {
         const pos = getCyclePos(day, cycleLength);
         const half = cycleLength / 2;
-        if (pos < 1 || pos > cycleLength - 1) return { label: '⚡ Критическая зона', color: '#ffa502' };
+        if (pos < 1 || pos > cycleLength - 1) return { label: '⚡ Переходная зона', color: '#ffa502' };
         if (pos < half) return { label: '⬆️ Фаза роста', color: '#2ed573' };
         return { label: '⬇️ Фаза спада', color: '#ff4757' };
     }
 
-    function describeRhythm(type, value, day, cycleLength) {
-        if (isCriticalDay(day, cycleLength)) return { text: CRITICAL_TEXT[type], critical: true };
+    function getHumanRhythmStatus(type, value, day, cycleLength) {
+        const isCritical = isCriticalDay(day, cycleLength);
+        if (isCritical) return RHYTHM_HUMAN[type].critical;
+        
         const level = getLevel(value);
-        const trend = getTrend(day, cycleLength);
-        const text = TREND_TEXT[level][trend] + ' ' + ADVICE_TEXT[type][level];
-        return { text: text, critical: false };
-    }
-
-    function generateRecommendation(physVal, emoVal, intelVal, day) {
-        const critPhys = isCriticalDay(day, RHYTHM_CONFIG.phys.cycle);
-        const critEmo = isCriticalDay(day, RHYTHM_CONFIG.emo.cycle);
-        const critIntel = isCriticalDay(day, RHYTHM_CONFIG.intel.cycle);
-        const criticalCount = [critPhys, critEmo, critIntel].filter(Boolean).length;
-
-        if (criticalCount > 0) return RECOMMENDATIONS.critical;
-
-        const physHigh = physVal > 25;
-        const intelHigh = intelVal > 25;
-        const emoHigh = emoVal > 25;
-        const emoLow = emoVal < -25;
-
-        if (physHigh && intelHigh) return RECOMMENDATIONS.high_phys_high_intel;
-        if (physHigh && !intelHigh) return RECOMMENDATIONS.high_phys_low_intel;
-        if (!physHigh && intelHigh) return RECOMMENDATIONS.low_phys_high_intel;
-        if (emoHigh) return RECOMMENDATIONS.high_emo;
-        if (emoLow) return RECOMMENDATIONS.low_emo;
-        return RECOMMENDATIONS.neutral;
-    }
-
-    function getEnergyIndex(physVal, emoVal, intelVal) {
-        const avg = (physVal + emoVal + intelVal) / 3;
-        const normalized = (avg + 100) / 2;
-        return Math.min(100, Math.max(0, Math.round(normalized)));
+        if (level === 'peak' || level === 'high') return RHYTHM_HUMAN[type].high;
+        if (level === 'mid') return RHYTHM_HUMAN[type].mid;
+        return RHYTHM_HUMAN[type].low;
     }
 
     function generateOverallSummary(dayOffset) {
@@ -907,53 +920,79 @@
         const emoVal = Math.sin((2 * Math.PI * dayOffset) / RHYTHM_CONFIG.emo.cycle) * 100;
         const intelVal = Math.sin((2 * Math.PI * dayOffset) / RHYTHM_CONFIG.intel.cycle) * 100;
 
+        const physStatus = getHumanRhythmStatus('phys', physVal, dayOffset, RHYTHM_CONFIG.phys.cycle);
+        const emoStatus = getHumanRhythmStatus('emo', emoVal, dayOffset, RHYTHM_CONFIG.emo.cycle);
+        const intelStatus = getHumanRhythmStatus('intel', intelVal, dayOffset, RHYTHM_CONFIG.intel.cycle);
+
+        // Заполняем breakdown
+        document.getElementById('breakdown-phys').textContent = physStatus;
+        document.getElementById('breakdown-emo').textContent = emoStatus;
+        document.getElementById('breakdown-intel').textContent = intelStatus;
+
         const critPhys = isCriticalDay(dayOffset, RHYTHM_CONFIG.phys.cycle);
         const critEmo = isCriticalDay(dayOffset, RHYTHM_CONFIG.emo.cycle);
         const critIntel = isCriticalDay(dayOffset, RHYTHM_CONFIG.intel.cycle);
-
         const criticalCount = [critPhys, critEmo, critIntel].filter(Boolean).length;
-        const positiveCount = [physVal, emoVal, intelVal].filter(v => v > 0).length;
 
-        const physStr = (physVal > 0 ? '+' : '') + physVal.toFixed(0) + '%';
-        const emoStr = (emoVal > 0 ? '+' : '') + emoVal.toFixed(0) + '%';
-        const intelStr = (intelVal > 0 ? '+' : '') + intelVal.toFixed(0) + '%';
+        const physHigh = physVal > 25;
+        const emoHigh = emoVal > 25;
+        const intelHigh = intelVal > 25;
+        const physLow = physVal < -25;
+        const emoLow = emoVal < -25;
+        const intelLow = intelVal < -25;
 
         let icon = '🔮', verdict = '', text = '';
 
+        // Формируем человеческий вывод
         if (criticalCount >= 2) {
             icon = '⚠️';
-            verdict = 'День повышенной осторожности';
-            text = `Два или три ритма одновременно пересекают нулевую линию. Это момент максимальной уязвимости. Избегайте серьёзных нагрузок, важных переговоров и принятия судьбоносных решений. (Физический: ${physStr}, Эмоциональный: ${emoStr}, Интеллектуальный: ${intelStr})`;
+            verdict = 'День переходных зон — будьте внимательны';
+            text = `В модели два или три ритма одновременно находятся в переходной зоне. Это период, когда стоит быть особенно внимательным к нагрузкам, решениям и эмоциональному состоянию. Лучше избегать рискованных действий и не принимать поспешных решений.`;
         } else if (criticalCount === 1) {
             icon = '⚠️';
-            verdict = 'Критическая зона — требует внимания';
-            text = `Один из ритмов сегодня пересекает нулевую отметку. Вы наиболее нестабильны в этой сфере. Будьте особенно внимательны и не перегружайте себя. (Физический: ${physStr}, Эмоциональный: ${emoStr}, Интеллектуальный: ${intelStr})`;
-        } else if (positiveCount === 3 && physVal > 25 && emoVal > 25 && intelVal > 25) {
+            verdict = 'Один ритм в переходной зоне';
+            text = `Один из ритмов сегодня находится в переходной зоне. В рамках модели это считается нестабильным периодом для этой сферы. Рекомендуется быть внимательнее к нагрузке, решениям и эмоциональному состоянию в соответствующей области.`;
+        } else if (physHigh && emoHigh && intelHigh) {
             icon = '🚀';
-            verdict = 'Идеальный день для свершений';
-            text = `Все три ритма в положительной зоне и гармонично дополняют друг друга. Отличное время для сложных проектов, встреч и активного отдыха. Используйте этот день на 100%! (Физический: ${physStr}, Эмоциональный: ${emoStr}, Интеллектуальный: ${intelStr})`;
-        } else if (positiveCount === 0) {
+            verdict = 'Отличный день для активности';
+            text = `Все три ритма на подъёме. Сегодня отличное время для сложных проектов, встреч и активного отдыха. Физическая энергия, эмоциональный фон и интеллект — всё на высоком уровне. Используйте этот день с максимальной пользой!`;
+        } else if (physLow && emoLow && intelLow) {
             icon = '🔋';
             verdict = 'День восстановления';
-            text = `Все три ритма в отрицательной фазе. Организм нуждается в передышке. Отложите важные задачи, откажитесь от интенсивных тренировок и посвятите время отдыху. (Физический: ${physStr}, Эмоциональный: ${emoStr}, Интеллектуальный: ${intelStr})`;
+            text = `Все три ритма в фазе спада. Организм нуждается в передышке. Отложите важные задачи, откажитесь от интенсивных тренировок и посвятите время отдыху и восстановлению.`;
         } else {
-            if (physVal < 0 && intelVal > 25) {
-                icon = '🧠';
-                verdict = 'Время для умственного труда';
-                text = `Интеллект на высоте (${intelStr}), но физическая энергия на спаде (${physStr}). Отличный день для планирования и аналитики. Избегайте тяжёлых физических нагрузок.`;
-            } else if (physVal > 25 && intelVal < 0) {
-                icon = '💪';
-                verdict = 'Тело просит движения';
-                text = `Физическая форма великолепна (${physStr}), но концентрация снижена (${intelStr}). Идеальный день для спорта или работы руками. Избегайте сложных умственных задач.`;
-            } else if (emoVal > 25) {
-                icon = '❤️';
-                verdict = 'Эмоциональный подъём и гармония';
-                text = `Эмоциональное состояние сегодня особенно устойчиво (${emoStr}). Прекрасное время для общения, творчества и решения вопросов, требующих эмпатии.`;
+            // Составляем комплексное описание
+            let parts = [];
+            if (physHigh) parts.push('физическая энергия высокая');
+            else if (physLow) parts.push('физическая энергия снижена');
+            else parts.push('физическая энергия умеренная');
+
+            if (emoHigh) parts.push('эмоциональный фон стабильный');
+            else if (emoLow) parts.push('эмоциональный фон снижен');
+            else parts.push('эмоциональное состояние ровное');
+
+            if (intelHigh) parts.push('интеллект на подъёме');
+            else if (intelLow) parts.push('интеллектуальная активность снижена');
+            else parts.push('интеллектуальная активность умеренная');
+
+            let advice = '';
+            if (physHigh && intelHigh) {
+                advice = 'День подходит для активной работы, требующей и физических, и умственных усилий.';
+            } else if (physHigh && intelLow) {
+                advice = 'Отличное время для физической работы и рутинных задач. Сложные решения лучше отложить.';
+            } else if (physLow && intelHigh) {
+                advice = 'Хороший день для интеллектуального труда. Физические нагрузки сведите к минимуму.';
+            } else if (emoHigh) {
+                advice = 'Прекрасное время для общения и творчества.';
+            } else if (emoLow) {
+                advice = 'Будьте бережны к себе в общении, избегайте конфликтов.';
             } else {
-                icon = '⚖️';
-                verdict = 'Нейтральный, сбалансированный день';
-                text = `Ритмы находятся в разных фазах, уравновешивая друг друга. Отличное время для повседневных дел и планомерного движения к целям без сверхусилий. (Физический: ${physStr}, Эмоциональный: ${emoStr}, Интеллектуальный: ${intelStr})`;
+                advice = 'Сбалансированный день для планомерной работы без сверхусилий.';
             }
+
+            icon = '⚖️';
+            verdict = 'Сбалансированный день';
+            text = `Сегодня ${parts.join(', ')}. ${advice}`;
         }
 
         const card = document.getElementById('overallSummaryCard');
@@ -988,6 +1027,45 @@
         document.getElementById('intelCycleSub').innerText = `${Math.round((getCyclePos(dayOffset, 33) / 33) * 100)}% цикла`;
 
         return { physVal, emoVal, intelVal };
+    }
+
+    function getEnergyIndex(physVal, emoVal, intelVal) {
+        const avg = (physVal + emoVal + intelVal) / 3;
+        const normalized = (avg + 100) / 2;
+        return Math.min(100, Math.max(0, Math.round(normalized)));
+    }
+
+    function generateRecommendation(physVal, emoVal, intelVal, day) {
+        const critPhys = isCriticalDay(day, RHYTHM_CONFIG.phys.cycle);
+        const critEmo = isCriticalDay(day, RHYTHM_CONFIG.emo.cycle);
+        const critIntel = isCriticalDay(day, RHYTHM_CONFIG.intel.cycle);
+        const criticalCount = [critPhys, critEmo, critIntel].filter(Boolean).length;
+
+        if (criticalCount > 0) {
+            return 'В переходной зоне лучше избегать рискованных действий и не принимать поспешных решений. Будьте внимательны к своему состоянию.';
+        }
+
+        const physHigh = physVal > 25;
+        const intelHigh = intelVal > 25;
+        const emoHigh = emoVal > 25;
+        const emoLow = emoVal < -25;
+
+        if (physHigh && intelHigh) {
+            return 'Отличный день для сложных проектов, требующих и физической активности, и умственного напряжения. Работа в саду, строительство или активный отдых на природе — всё будет в радость.';
+        }
+        if (physHigh && !intelHigh) {
+            return 'Хороший день для физической работы и рутинных задач. Сложные решения лучше отложить. Займитесь спортом или делами, не требующими глубокой концентрации.';
+        }
+        if (!physHigh && intelHigh) {
+            return 'День для интеллектуального труда. Планируйте, анализируйте, учитесь. Физические нагрузки сведите к минимуму.';
+        }
+        if (emoHigh) {
+            return 'Эмоциональный подъём — отличное время для общения, творчества и решения вопросов, требующих эмпатии. Наслаждайтесь общением с близкими.';
+        }
+        if (emoLow) {
+            return 'Эмоциональный спад — будьте бережны к себе. Избегайте конфликтов, не принимайте важных решений, связанных с людьми.';
+        }
+        return 'Сбалансированный день. Занимайтесь повседневными делами, не форсируйте события. Прислушивайтесь к своему организму.';
     }
 
     function calculateBiorhythms() {
@@ -1058,7 +1136,7 @@
 
         const isCritical = isCriticalDay(currentDay, cycleLength);
         if (isCritical) {
-            textElem.innerText = 'Критическая зона ⚠️';
+            textElem.innerText = 'Переходная зона ⚠️';
             textElem.style.color = '#ffa502';
         } else if (value > 0) {
             textElem.innerText = 'Фаза Роста ↗️';
@@ -1068,9 +1146,9 @@
             textElem.style.color = config.color;
         }
 
-        const description = describeRhythm(type, value, currentDay, cycleLength);
-        descElem.innerText = description.text;
-        descElem.classList.toggle('is-critical', description.critical);
+        const humanStatus = getHumanRhythmStatus(type, value, currentDay, cycleLength);
+        descElem.innerText = humanStatus;
+        descElem.classList.toggle('is-critical', isCritical);
     }
 
     // ============================================================
@@ -1168,7 +1246,7 @@
     }
 
     // ============================================================
-    // ЛУЧШИЕ ДНИ - ИСПРАВЛЕННАЯ ВЕРСИЯ
+    // ЛУЧШИЕ ДНИ
     // ============================================================
     function renderBestDays(birthDate, targetDate, currentDay) {
         const container = document.getElementById('bestDaysGrid');
@@ -1199,7 +1277,6 @@
             }
             const isToday = idx === 0;
             
-            // Форматируем значения, убираем лишние символы
             const physStr = (r.phys > 0 ? '+' : '') + r.phys.toFixed(0) + '%';
             const emoStr = (r.emo > 0 ? '+' : '') + r.emo.toFixed(0) + '%';
             const intelStr = (r.intel > 0 ? '+' : '') + r.intel.toFixed(0) + '%';
@@ -1237,17 +1314,18 @@
             RHYTHM_TYPES.forEach(type => {
                 const config = RHYTHM_CONFIG[type];
                 const value = Math.sin((2 * Math.PI * dayOffset) / config.cycle) * 100;
-                const description = describeRhythm(type, value, dayOffset, config.cycle);
+                const isCritical = isCriticalDay(dayOffset, config.cycle);
+                const humanStatus = getHumanRhythmStatus(type, value, dayOffset, config.cycle);
                 const formattedValue = (value > 0 ? '+' : '') + value.toFixed(0) + '%';
                 rowsHtml += `
                     <div class="day-detail-row">
                         <div class="day-detail-dot" style="color:${config.color}; background-color:${config.color};"></div>
                         <div class="day-detail-content">
                             <div class="day-detail-name-value">
-                                <span>${config.emoji} ${config.name}${description.critical ? '<span class="critical-tag">Критическая зона</span>' : ''}</span>
+                                <span>${config.emoji} ${config.name}${isCritical ? '<span class="critical-tag">Переходная зона</span>' : ''}</span>
                                 <span style="color:${config.color}; white-space:nowrap;">${formattedValue}</span>
                             </div>
-                            <div class="day-detail-text">${description.text}</div>
+                            <div class="day-detail-text">${humanStatus}</div>
                         </div>
                     </div>`;
             });
